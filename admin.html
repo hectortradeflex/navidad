@@ -49,13 +49,23 @@
         <h2>Panel de administración</h2>
         <p class="lead">Aquí se arma la lista de participantes y se abre el sorteo. Los resultados
           nunca se muestran en este panel: solo cada participante ve el suyo.</p>
+        <div class="notice gold" id="setup-note" hidden>
+          <svg class="icon"><use href="#i-key"/></svg>
+          <span><b>Primera vez:</b> crea la contraseña del panel. Guárdala bien: con ella entrarás
+            después. Hazlo antes de compartir el enlace del sitio.</span>
+        </div>
         <form class="form" id="login-form" novalidate>
           <div class="field">
-            <label for="login-password">Contraseña de administración</label>
+            <label for="login-password" id="login-label">Contraseña de administración</label>
             <div class="input-row">
               <input type="password" id="login-password" autocomplete="current-password" required>
               <button type="button" class="reveal-toggle" data-toggle="login-password">Mostrar</button>
             </div>
+            <span class="hint" id="login-hint" hidden>Mínimo 8 caracteres.</span>
+          </div>
+          <div class="field" id="setup-confirm-field" hidden>
+            <label for="setup-confirm">Escríbela otra vez</label>
+            <input type="password" id="setup-confirm" autocomplete="new-password">
           </div>
           <div class="notice error" id="login-error" role="alert"></div>
           <button class="btn btn-green btn-big btn-block" type="submit" id="login-submit">Entrar al panel</button>
@@ -144,6 +154,30 @@
                 <textarea id="s-message" maxlength="600" rows="3" placeholder="¡Trae tu regalo envuelto y con el nombre de quien lo recibe!"></textarea>
               </div>
               <button class="btn btn-green" type="submit" id="settings-submit">Guardar cambios</button>
+            </form>
+          </div>
+
+          <!-- Contraseña -->
+          <div class="card" id="password-card">
+            <span class="eyebrow">Seguridad</span>
+            <h2>Contraseña del panel</h2>
+            <form class="form" id="password-form" novalidate>
+              <div class="field">
+                <label for="pw-current">Contraseña actual</label>
+                <input type="password" id="pw-current" autocomplete="current-password">
+              </div>
+              <div class="row-2">
+                <div class="field">
+                  <label for="pw-new">Nueva contraseña</label>
+                  <input type="password" id="pw-new" autocomplete="new-password">
+                </div>
+                <div class="field">
+                  <label for="pw-confirm">Repítela</label>
+                  <input type="password" id="pw-confirm" autocomplete="new-password">
+                </div>
+              </div>
+              <div class="notice error" id="password-error" role="alert"></div>
+              <button class="btn btn-ghost" type="submit" id="password-submit">Cambiar contraseña</button>
             </form>
           </div>
         </div>

@@ -8,6 +8,8 @@ let editingId = null;
 decorate();
 init();
 
+let setupMode = false;
+
 async function init() {
   try {
     const info = await api("info");
@@ -15,6 +17,7 @@ async function init() {
       const res = await api("admin_state");
       return showPanel(res.state);
     }
+    setupMode = !!info.adminSetup;
   } catch (err) {
     if (err.code !== "admin_required") toast(err.message, "error");
   }
@@ -42,6 +45,12 @@ function showLogin() {
   $("#panel-view").hidden = true;
   $("#admin-who").hidden = true;
   $("#login-view").hidden = false;
+  $("#setup-note").hidden = !setupMode;
+  $("#setup-confirm-field").hidden = !setupMode;
+  $("#login-hint").hidden = !setupMode;
+  $("#login-label").textContent = setupMode ? "Crea una contraseña" : "Contraseña de administración";
+  $("#login-password").autocomplete = setupMode ? "new-password" : "current-password";
+  $("#login-submit").textContent = setupMode ? "Crear contraseña y entrar" : "Entrar al panel";
   $("#login-password").focus();
 }
 
@@ -54,9 +63,40 @@ $("#login-form").addEventListener("submit", async (e) => {
   const btn = $("#login-submit");
   setBusy(btn, true, "Entrando…");
   try {
-    const res = await api("admin_login", { password });
+    const res = setupMode
+      ? await api("admin_setup", { password, confirm: $("#setup-confirm").value })
+      : await api("admin_login", { password });
     $("#login-password").value = "";
+    $("#setup-confirm").value = "";
+    setupMode = false;
+    setBusy(btn, false);
     showPanel(res.state);
+  } catch (err) {
+    setBusy(btn, false);
+    // Cambió el modo en el servidor (alguien ya creó la contraseña, o aún no existe).
+    if (err.code === "needs_setup" || err.code === "already_configured") {
+      setupMode = err.code === "needs_setup";
+      showLogin();
+    }
+    handleError(err, box);
+  }
+});
+
+$("#password-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const box = $("#password-error");
+  box.textContent = "";
+  const btn = $("#password-submit");
+  setBusy(btn, true, "Guardando…");
+  try {
+    const res = await api("admin_password", {
+      current: $("#pw-current").value,
+      password: $("#pw-new").value,
+      confirm: $("#pw-confirm").value,
+    });
+    e.target.reset();
+    render(res.state);
+    toast("Contraseña actualizada.");
   } catch (err) {
     handleError(err, box);
   } finally {
@@ -86,6 +126,7 @@ function showPanel(state) {
 
 function render(state) {
   st = state;
+  $("#password-card").hidden = state.passwordInConfig;
   const { counts, draw } = state;
   $("#stat-total").textContent = counts.total;
   $("#stat-registered").textContent = counts.registered;

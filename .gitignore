@@ -1,5 +1,5 @@
 # Datos del intercambio (base SQLite): viven solo en el servidor
-public/data/
+data/
 *.sqlite
 *.sqlite-journal
 node_modules/

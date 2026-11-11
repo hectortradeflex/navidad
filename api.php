@@ -285,21 +285,48 @@ function receiver_name(array $p): ?string
 }
 
 // ------------------------------------------------------------------ administrador
-function admin_password_ok(string $given): bool
+const PASSWORD_MIN = 8;
+
+/** Contraseña fijada en config.php (o variable de entorno), si es válida. */
+function config_password(): ?string
 {
     global $CONFIG;
-    $stored = (string) $CONFIG['admin_password'];
+    $pw = (string) ($CONFIG['admin_password'] ?? '');
+    if ($pw === '' || $pw === DEFAULT_PASSWORD || strlen($pw) < PASSWORD_MIN) {
+        return null;
+    }
+    return $pw;
+}
+
+function admin_configured(): bool
+{
+    return config_password() !== null || isset(settings()['admin_hash']);
+}
+
+function admin_password_ok(string $given): bool
+{
+    $stored = config_password();
+    if ($stored === null) {
+        $hash = settings()['admin_hash'] ?? null;
+        return $hash !== null && password_verify($given, $hash);
+    }
     if (preg_match('/^\$(2y|2a|2b|argon2i|argon2id)\$/', $stored)) {
         return password_verify($given, $stored);
     }
     return hash_equals($stored, $given);
 }
 
-function admin_configured(): bool
+function new_password_or_fail(array $in): string
 {
-    global $CONFIG;
-    $pw = (string) $CONFIG['admin_password'];
-    return $pw !== '' && $pw !== DEFAULT_PASSWORD && strlen($pw) >= 8;
+    $pw = is_string($in['password'] ?? null) ? $in['password'] : '';
+    $confirm = is_string($in['confirm'] ?? null) ? $in['confirm'] : '';
+    if (strlen_u($pw) < PASSWORD_MIN || strlen($pw) > 200) {
+        fail(400, 'weak_password', 'La contraseña debe tener al menos ' . PASSWORD_MIN . ' caracteres.');
+    }
+    if ($pw !== $confirm) {
+        fail(400, 'mismatch', 'Las dos contraseñas no coinciden.');
+    }
+    return $pw;
 }
 
 function require_admin(): void
@@ -321,6 +348,7 @@ function admin_state(): array
     ], $rows);
     $s = settings();
     return [
+        'passwordInConfig' => config_password() !== null,
         'settings' => array_intersect_key($s, SETTING_DEFAULTS),
         'draw' => [
             'open' => isset($s['draw_started_at']),
@@ -384,6 +412,8 @@ $routes = [
     'POST leave' => 'action_leave',
     'GET admin_state' => 'action_admin_state',
     'POST admin_login' => 'action_admin_login',
+    'POST admin_setup' => 'action_admin_setup',
+    'POST admin_password' => 'action_admin_password',
     'POST admin_logout' => 'action_admin_logout',
     'POST admin_settings' => 'action_admin_settings',
     'POST admin_add' => 'action_admin_add',
@@ -407,6 +437,7 @@ function action_info(array $in): void
         'exchange' => public_settings(),
         'me' => me_payload(current_participant()),
         'admin' => !empty($_SESSION['admin']),
+        'adminSetup' => !admin_configured(),
     ]);
 }
 
@@ -545,7 +576,7 @@ function action_leave(array $in): void
 function action_admin_login(array $in): void
 {
     if (!admin_configured()) {
-        fail(503, 'not_configured', 'Falta configurar la contraseña del administrador en config.php (mínimo 8 caracteres y distinta a la de ejemplo).');
+        fail(409, 'needs_setup', 'Todavía no hay contraseña de administración. Crea una para empezar.');
     }
     $key = 'admin:' . client_ip();
     rl_check($key);
@@ -559,6 +590,41 @@ function action_admin_login(array $in): void
     rl_clear($key);
     session_regenerate_id(true);
     $_SESSION['admin'] = true;
+    out(['state' => admin_state()]);
+}
+
+/** Primera visita al panel: crear la contraseña. Solo funciona mientras no exista ninguna. */
+function action_admin_setup(array $in): void
+{
+    $pw = new_password_or_fail($in);
+    $pdo = db();
+    $pdo->exec('BEGIN IMMEDIATE');
+    if (admin_configured()) {
+        $pdo->exec('ROLLBACK');
+        fail(409, 'already_configured', 'La contraseña de administración ya existe. Entra con ella.');
+    }
+    set_setting('admin_hash', password_hash($pw, PASSWORD_DEFAULT));
+    $pdo->exec('COMMIT');
+    session_regenerate_id(true);
+    $_SESSION['admin'] = true;
+    out(['state' => admin_state()]);
+}
+
+function action_admin_password(array $in): void
+{
+    require_admin();
+    if (config_password() !== null) {
+        fail(409, 'in_config', 'La contraseña está fijada en config.php; cámbiala ahí.');
+    }
+    $key = 'admin:' . client_ip();
+    rl_check($key);
+    $current = is_string($in['current'] ?? null) ? $in['current'] : '';
+    if (!admin_password_ok($current)) {
+        rl_fail($key, 6, 900);
+        fail(401, 'wrong_password', 'La contraseña actual no es correcta.');
+    }
+    $pw = new_password_or_fail($in);
+    set_setting('admin_hash', password_hash($pw, PASSWORD_DEFAULT));
     out(['state' => admin_state()]);
 }
 

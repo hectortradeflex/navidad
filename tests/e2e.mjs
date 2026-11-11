@@ -12,15 +12,17 @@ import { createRequire } from "node:module";
 // require() respeta NODE_PATH, así funciona con Playwright instalado global o localmente.
 const { chromium, devices } = createRequire(import.meta.url)("playwright");
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "intercambio-"));
 const PORT = 8000 + Math.floor(Math.random() * 900);
 const BASE = `http://127.0.0.1:${PORT}/`;
 const ADMIN_PW = "renos-y-trineos-2026";
+const ADMIN_PW2 = "esferas-doradas-2026";
 const SHOTS = process.env.SHOTS;
 
 const php = spawn("php", ["-S", `127.0.0.1:${PORT}`, "-t", root], {
-  env: { ...process.env, INTERCAMBIO_ADMIN_PASSWORD: ADMIN_PW, INTERCAMBIO_DATA_DIR: dataDir },
+  // Sin contraseña en la configuración: se crea desde el panel en la primera visita.
+  env: { ...process.env, INTERCAMBIO_ADMIN_PASSWORD: "", INTERCAMBIO_DATA_DIR: dataDir },
   stdio: ["ignore", "ignore", "pipe"],
 });
 let phpErr = "";
@@ -54,10 +56,38 @@ try {
   const secrets = { "Ana López": "pistache", "José Pérez": "Firulais", "Carlos Ruiz": "tamales", "María Fernanda": "rosca de reyes", "Lucía Gómez": "nieve" };
 
   // ---------------------------------------------------------------- admin
-  log("admin: contraseña incorrecta y correcta");
+  log("admin: primera visita, crear la contraseña del panel");
   const adminCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const admin = await adminCtx.newPage();
   await admin.goto(BASE + "admin.html");
+  await admin.locator("#setup-note").waitFor();
+  await shot(admin, "00-admin-primera-vez");
+  await admin.fill("#login-password", "corta");
+  await admin.fill("#setup-confirm", "corta");
+  await admin.click("#login-submit");
+  await admin.getByText("al menos 8 caracteres").waitFor();
+  await admin.fill("#login-password", ADMIN_PW);
+  await admin.fill("#setup-confirm", ADMIN_PW);
+  await admin.click("#login-submit");
+  await admin.locator("#panel-view").waitFor();
+
+  log("admin: ya no se puede volver a crear la contraseña");
+  const resetup = await fetch(BASE + "api.php?action=info").then(async (r) => {
+    const info = await r.json();
+    const cookie = r.headers.get("set-cookie").split(";")[0];
+    const res = await fetch(BASE + "api.php?action=admin_setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": info.csrf, Cookie: cookie },
+      body: JSON.stringify({ password: "otra-contrasena", confirm: "otra-contrasena" }),
+    });
+    return { adminSetup: info.adminSetup, status: res.status };
+  });
+  assert.deepEqual(resetup, { adminSetup: false, status: 409 });
+
+  log("admin: cerrar sesión, contraseña incorrecta y correcta");
+  await admin.click("#logout");
+  await admin.locator("#login-view").waitFor();
+  assert.equal(await admin.locator("#setup-note").isHidden(), true);
   await admin.fill("#login-password", "equivocada");
   await admin.click("#login-submit");
   await admin.getByText("Contraseña incorrecta").waitFor();
@@ -228,9 +258,30 @@ try {
   await admin.getByText("Sorteo sin iniciar").waitFor();
   assert.equal(await admin.locator("#stat-spun").textContent(), "0");
 
+  log("admin: cambiar la contraseña");
+  await admin.fill("#pw-current", "no-es-esta");
+  await admin.fill("#pw-new", ADMIN_PW2);
+  await admin.fill("#pw-confirm", ADMIN_PW2);
+  await admin.click("#password-submit");
+  await admin.getByText("La contraseña actual no es correcta").waitFor();
+  await admin.fill("#pw-current", ADMIN_PW);
+  await admin.click("#password-submit");
+  await admin.getByText("Contraseña actualizada").waitFor();
+  await admin.click("#logout");
+  await admin.fill("#login-password", ADMIN_PW);
+  await admin.click("#login-submit");
+  await admin.getByText("Contraseña incorrecta").waitFor();
+  await admin.fill("#login-password", ADMIN_PW2);
+  await admin.click("#login-submit");
+  await admin.locator("#panel-view").waitFor();
+
   log("seguridad: escrituras sin token CSRF se rechazan y la base no se descarga");
   const noCsrf = await fetch(BASE + "api.php?action=admin_draw_start", { method: "POST", body: "{}" });
   assert.equal(noCsrf.status, 403);
+  for (const blocked of ["config.php"]) {
+    const r = await fetch(BASE + blocked);
+    assert.equal((await r.text()).trim(), "", `${blocked} no debe mostrar contenido`);
+  }
 
   console.log("\n✔ Todas las pruebas pasaron");
 } catch (err) {

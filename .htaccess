@@ -3,11 +3,12 @@
 Options -Indexes
 DirectoryIndex index.html
 
-# Nunca servir: archivos ocultos, la configuración ni la base de datos.
-<FilesMatch "^(\.|config\.php$)|\.(sqlite|sqlite3|db|md|sh|log)$">
+# Nunca servir: archivos ocultos (.git, .gitignore), la configuración, la base de
+# datos, la documentación ni las pruebas.
+<FilesMatch "^(\.|config\.php$)|\.(sqlite|sqlite3|db|md|sh|log|mjs)$">
   Require all denied
 </FilesMatch>
-RedirectMatch 404 ^/(.*/)?data(/|$)
+RedirectMatch 404 ^/(.*/)?(data|tests|\.git)(/|$)
 
 AddType application/javascript .js
 AddType image/svg+xml .svg
