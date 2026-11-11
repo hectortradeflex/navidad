@@ -12,7 +12,7 @@ export class ApiError extends Error {
 }
 
 async function request(action, body) {
-  const opts = { method: body === undefined ? "GET" : "POST", credentials: "same-origin", headers: {} };
+  const opts = { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", headers: {} };
   if (body !== undefined) {
     opts.headers["Content-Type"] = "application/json";
     opts.headers["X-CSRF-Token"] = csrf;
@@ -21,7 +21,8 @@ async function request(action, body) {
   let res;
   let data;
   try {
-    res = await fetch(`api.php?action=${encodeURIComponent(action)}`, opts);
+    // El parámetro "_" evita que alguna caché intermedia devuelva una respuesta vieja.
+    res = await fetch(`api.php?action=${encodeURIComponent(action)}&_=${Date.now()}`, opts);
   } catch {
     throw new ApiError(0, null);
   }

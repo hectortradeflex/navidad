@@ -22,7 +22,12 @@ const SECRET_MAX = 100;
 
 // ------------------------------------------------------------------ respuesta
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
+// Nunca guardar en caché las respuestas: ni el navegador, ni la caché de LiteSpeed /
+// CDN del hosting (si no, la página mostraría datos viejos del intercambio).
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+header('X-LiteSpeed-Cache-Control: no-cache');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
