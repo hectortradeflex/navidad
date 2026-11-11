@@ -54,7 +54,7 @@ config.php            opciones (normalmente no hay que tocarlo)
 .htaccess             seguridad, caché y HTTPS
 assets/               styles.css, app.js, admin.js, wheel.js, common.js, favicon.svg
 tests/e2e.mjs         prueba de punta a punta (no se sirve en la web)
-(intercambio-datos/)   se crea sola junto a public_html con la base de datos (no va en git)
+(intercambio-datos*/)  se crea sola fuera de public_html con la base de datos (no va en git)
 ```
 
 Es HTML, CSS y JavaScript sin compilar, más un archivo PHP. No usa dependencias ni
@@ -63,9 +63,17 @@ Es HTML, CSS y JavaScript sin compilar, más un archivo PHP. No usa dependencias
 ## Publicar en Hostinger
 
 El sitio necesita **PHP 8 o superior** con **pdo_sqlite** (Hostinger los trae activos
-por defecto). La base de datos se guarda **fuera** de la carpeta del sitio, en
-`intercambio-datos/`, junto a `public_html`. Así, aunque un despliegue reemplace todo
-`public_html`, no se pierden los participantes, el sorteo ni la contraseña.
+por defecto). Funciona en la raíz de un dominio o en una **subcarpeta**, como
+`https://singulardigital.mx/navidad/`.
+
+La base de datos se guarda **fuera de `public_html`**, junto a ella. Así nadie la puede
+descargar, y aunque un despliegue reemplace la carpeta del sitio, no se pierden los
+participantes, el sorteo ni la contraseña:
+
+| Sitio instalado en | Base de datos en |
+|---|---|
+| `public_html/` | `intercambio-datos/intercambio.sqlite` |
+| `public_html/navidad/` | `intercambio-datos-navidad/intercambio.sqlite` |
 
 ### Opción A · «Importar repositorio» → «Desplegar como estático»
 
@@ -107,8 +115,8 @@ En GitHub, pulsa *Code → Download ZIP*. En el *Administrador de archivos*, sú
 extráelo de modo que `index.html`, `api.php` y `.htaccess` queden directamente en
 `public_html`. Sigue desde el paso 4 de la opción A.
 
-> **Respaldo:** descarga `intercambio-datos/intercambio.sqlite`, que está junto a
-> `public_html`. Si el hosting no deja escribir fuera del sitio, la base se guarda
+> **Respaldo:** descarga el archivo `.sqlite` de la tabla de arriba desde el
+> *Administrador de archivos*. Está un nivel arriba de `public_html`. Si el hosting no deja escribir fuera del sitio, la base se guarda
 > dentro, en `data/`, protegida por `.htaccess`. En ese caso, **no la borres al
 > actualizar**. En `config.php` puedes fijar otra ruta (`data_dir`) o la contraseña
 > (`admin_password`).

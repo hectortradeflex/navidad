@@ -12,19 +12,24 @@ import { createRequire } from "node:module";
 // require() respeta NODE_PATH, así funciona con Playwright instalado global o localmente.
 const { chromium, devices } = createRequire(import.meta.url)("playwright");
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "intercambio-"));
+// Se instala como en producción: dentro de una SUBCARPETA de public_html
+// (como https://singulardigital.mx/navidad/), sin indicar dónde guardar los datos.
+const repo = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "intercambio-"));
+const docroot = path.join(runDir, "public_html");
+const site = path.join(docroot, "navidad");
+fs.cpSync(repo, site, { recursive: true, filter: (p) => !/[\\/](\.git|tests|node_modules)$/.test(p) });
+const expectedDb = path.join(runDir, "intercambio-datos-navidad", "intercambio.sqlite");
+
 const PORT = 8000 + Math.floor(Math.random() * 900);
-const BASE = `http://127.0.0.1:${PORT}/`;
+const BASE = `http://127.0.0.1:${PORT}/navidad/`;
 const ADMIN_PW = "renos-y-trineos-2026";
 const ADMIN_PW2 = "esferas-doradas-2026";
 const SHOTS = process.env.SHOTS;
 
-const php = spawn("php", ["-S", `127.0.0.1:${PORT}`, "-t", root], {
-  // Sin contraseña en la configuración: se crea desde el panel en la primera visita.
-  env: { ...process.env, INTERCAMBIO_ADMIN_PASSWORD: "", INTERCAMBIO_DATA_DIR: dataDir },
-  stdio: ["ignore", "ignore", "pipe"],
-});
+const env = { ...process.env, INTERCAMBIO_ADMIN_PASSWORD: "" };
+delete env.INTERCAMBIO_DATA_DIR;
+const php = spawn("php", ["-S", `127.0.0.1:${PORT}`, "-t", docroot], { env, stdio: ["ignore", "ignore", "pipe"] });
 let phpErr = "";
 php.stderr.on("data", (d) => (phpErr += d));
 
@@ -70,6 +75,13 @@ try {
   await admin.fill("#setup-confirm", ADMIN_PW);
   await admin.click("#login-submit");
   await admin.locator("#panel-view").waitFor();
+
+  log("datos: la base queda fuera de public_html y la cookie limitada a /navidad/");
+  assert.ok(fs.existsSync(expectedDb), `se esperaba la base en ${expectedDb}`);
+  assert.ok(!fs.existsSync(path.join(docroot, "intercambio-datos")), "no debe haber datos dentro de public_html");
+  assert.ok(!fs.existsSync(path.join(site, "data")), "no debe haber datos dentro del sitio");
+  const cookies = await adminCtx.cookies();
+  assert.equal(cookies.find((c) => c.name === "intercambio")?.path, "/navidad/");
 
   log("admin: ya no se puede volver a crear la contraseña");
   const resetup = await fetch(BASE + "api.php?action=info").then(async (r) => {
@@ -291,5 +303,5 @@ try {
 } finally {
   await browser.close();
   php.kill();
-  fs.rmSync(dataDir, { recursive: true, force: true });
+  fs.rmSync(runDir, { recursive: true, force: true });
 }
