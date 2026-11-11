@@ -120,6 +120,7 @@ function db(): PDO
             gen           INTEGER NOT NULL DEFAULT 0,
             receiver_id   INTEGER REFERENCES participants(id),
             revealed_at   TEXT,
+            wishes        TEXT,
             created_at    TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS settings (
@@ -133,6 +134,11 @@ function db(): PDO
             locked_until INTEGER NOT NULL DEFAULT 0
         );
     SQL);
+    // Bases creadas por versiones anteriores: agregar las columnas nuevas.
+    $cols = array_column($pdo->query('PRAGMA table_info(participants)')->fetchAll(), 'name');
+    if (!in_array('wishes', $cols, true)) {
+        $pdo->exec('ALTER TABLE participants ADD COLUMN wishes TEXT');
+    }
     return $pdo;
 }
 
@@ -293,18 +299,40 @@ function me_payload(?array $p): ?array
         'name' => $p['name'],
         'spun' => $p['revealed_at'] !== null,
         'drawOpen' => $p['receiver_id'] !== null,
+        'wishes' => (string) ($p['wishes'] ?? ''),
     ];
 }
 
-function receiver_name(array $p): ?string
+/**
+ * A quién le regala y sus ideas de regalo. Solo se llama para el propio participante
+ * (con sesión) y después de que giró la rueda.
+ */
+function receiver_payload(array $p): array
 {
     if ($p['receiver_id'] === null) {
-        return null;
+        return ['receiver' => null, 'receiverWishes' => ''];
     }
-    $st = db()->prepare('SELECT name FROM participants WHERE id = ?');
+    $st = db()->prepare('SELECT name, wishes FROM participants WHERE id = ?');
     $st->execute([$p['receiver_id']]);
-    $name = $st->fetchColumn();
-    return $name === false ? null : (string) $name;
+    $r = $st->fetch();
+    return [
+        'receiver' => $r ? (string) $r['name'] : null,
+        'receiverWishes' => $r ? (string) ($r['wishes'] ?? '') : '',
+    ];
+}
+
+const WISHES_MAX = 800;
+
+/** Limpia el texto de ideas: sin caracteres de control, máximo 12 renglones. */
+function clean_wishes($text): string
+{
+    $text = is_string($text) ? str_replace("\r", '', $text) : '';
+    $text = preg_replace('/[\x00-\x09\x0B-\x1F\x7F]/u', '', $text) ?? '';
+    $lines = array_values(array_filter(array_map(
+        fn($l) => trim(preg_replace('/\s+/u', ' ', $l) ?? ''),
+        explode("\n", $text)
+    ), fn($l) => $l !== ''));
+    return implode("\n", array_slice($lines, 0, 12));
 }
 
 // ------------------------------------------------------------------ administrador
@@ -361,13 +389,14 @@ function require_admin(): void
 
 function admin_state(): array
 {
-    $rows = db()->query('SELECT id, name, secret_hash, revealed_at, receiver_id FROM participants
+    $rows = db()->query('SELECT id, name, secret_hash, revealed_at, receiver_id, wishes FROM participants
                          ORDER BY name_key')->fetchAll();
     $list = array_map(fn($r) => [
         'id' => (int) $r['id'],
         'name' => $r['name'],
         'registered' => $r['secret_hash'] !== null,
         'spun' => $r['revealed_at'] !== null,
+        'hasWishes' => ($r['wishes'] ?? '') !== '',
     ], $rows);
     $s = settings();
     return [
@@ -433,6 +462,7 @@ $routes = [
     'POST recover' => 'action_recover',
     'POST spin' => 'action_spin',
     'POST leave' => 'action_leave',
+    'POST wishes' => 'action_wishes',
     'GET admin_state' => 'action_admin_state',
     'POST admin_login' => 'action_admin_login',
     'POST admin_setup' => 'action_admin_setup',
@@ -545,7 +575,7 @@ function action_enter(array $in): void
 function action_recover(array $in): void
 {
     $p = authenticate($in, 'recover');
-    out(['me' => me_payload($p), 'receiver' => receiver_name($p)]);
+    out(['me' => me_payload($p)] + receiver_payload($p));
 }
 
 function action_spin(array $in): void
@@ -573,7 +603,7 @@ function action_spin(array $in): void
         }
         throw $e;
     }
-    out(['alreadySpun' => $already, 'receiver' => receiver_name($p)]);
+    out(['alreadySpun' => $already] + receiver_payload($p));
 }
 
 function action_result(array $in): void
@@ -585,7 +615,23 @@ function action_result(array $in): void
     if ($p['revealed_at'] === null) {
         fail(409, 'not_spun', 'Aún no has girado la rueda.', ['me' => me_payload($p)]);
     }
-    out(['me' => me_payload($p), 'receiver' => receiver_name($p)]);
+    out(['me' => me_payload($p)] + receiver_payload($p));
+}
+
+/** Guarda las ideas de regalo del participante con sesión. */
+function action_wishes(array $in): void
+{
+    $p = current_participant();
+    if (!$p) {
+        fail(401, 'not_signed_in', 'Tu sesión terminó. Vuelve a entrar con tu nombre y tu respuesta secreta.');
+    }
+    $text = clean_wishes($in['wishes'] ?? '');
+    if (strlen_u($text) > WISHES_MAX) {
+        fail(400, 'too_long', 'Tus ideas son demasiado largas (máximo ' . WISHES_MAX . ' caracteres).');
+    }
+    db()->prepare('UPDATE participants SET wishes = ? WHERE id = ?')->execute([$text === '' ? null : $text, $p['id']]);
+    $p['wishes'] = $text;
+    out(['me' => me_payload($p)]);
 }
 
 function action_leave(array $in): void

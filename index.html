@@ -84,7 +84,7 @@
         <li class="step">
           <span class="step-num">3</span>
           <h3>Gira la rueda</h3>
-          <p>Cuando se detenga, descubrirás a quién le toca tu regalo. ¡Guarda el secreto!</p>
+          <p>Descubre a quién le toca tu regalo y mira sus ideas. Deja también las tuyas. ¡Guarda el secreto!</p>
         </li>
       </ol>
     </section>
@@ -152,6 +152,7 @@
         <svg class="icon"><use href="#i-star"/></svg> ¡Girar la rueda!
       </button>
       <p class="wheel-status" id="wheel-status" role="status" aria-live="polite"></p>
+      <div class="wishes-slot"></div>
     </section>
 
     <!-- ================================================================ RESULTADO -->
@@ -166,6 +167,14 @@
         </svg>
         <p class="result-label" id="t-resultado"><span data-bind="me-name"></span>, tu amigo secreto es…</p>
         <p class="result-name" id="result-name"></p>
+
+        <div class="ideas" id="receiver-ideas">
+          <h3><svg class="icon"><use href="#i-gift"/></svg><span>Ideas de regalo de <span id="receiver-ideas-name"></span></span></h3>
+          <ul class="ideas-list" id="receiver-ideas-list"></ul>
+          <p class="muted" id="receiver-ideas-empty">Todavía no ha escrito ideas. Vuelve a consultar más tarde:
+            aquí aparecerán en cuanto las agregue.</p>
+        </div>
+
         <ul class="chips" id="result-chips"></ul>
         <div class="notice gold">
           <svg class="icon"><use href="#i-lock"/></svg>
@@ -176,6 +185,7 @@
           <a class="btn btn-ghost" href="#/">Ir al inicio</a>
         </div>
       </div>
+      <div class="wishes-slot"></div>
     </section>
 
     <!-- ================================================================ RECUPERAR -->
@@ -205,6 +215,25 @@
       </div>
     </section>
   </main>
+
+  <!-- Tarjeta "Tus ideas de regalo": se muestra dentro de la rueda o del resultado -->
+  <div class="card wishes-card" id="my-wishes" hidden>
+    <span class="eyebrow"><svg class="icon"><use href="#i-gift"/></svg> Tu lista de deseos</span>
+    <h2>Tus ideas de regalo</h2>
+    <p class="lead">Escribe algunas ideas de lo que te gustaría recibir, una por renglón.
+      Solo las verá la persona que te regala.</p>
+    <form class="form" id="wishes-form" novalidate>
+      <div class="field">
+        <label for="wishes-text" class="sr-only">Tus ideas de regalo</label>
+        <textarea id="wishes-text" maxlength="800" rows="4" placeholder="Un libro de misterio&#10;Una taza grande para café&#10;Talla M en playeras"></textarea>
+        <span class="hint">Puedes cambiarlas cuando quieras. Si pegas un enlace de una tienda, se podrá abrir.</span>
+      </div>
+      <div class="notice error" id="wishes-error" role="alert"></div>
+      <div class="actions">
+        <button class="btn btn-green" type="submit" id="wishes-submit">Guardar mis ideas</button>
+      </div>
+    </form>
+  </div>
 
   <footer class="footer">
     <p>Hecho con cariño para compartir esta Navidad · <a href="admin.html">Administración</a></p>

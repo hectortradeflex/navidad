@@ -176,6 +176,7 @@ function viewRow(p) {
     { class: "pbadges" },
     el("span", { class: `badge ${p.registered ? "on" : ""}` }, p.registered ? "Registrado" : "Sin registrar"),
     st.draw.open ? el("span", { class: `badge ${p.spun ? "on" : "red"}` }, p.spun ? "Ya giró" : "Falta girar") : null,
+    p.hasWishes ? el("span", { class: "badge on", title: "Ya escribió sus ideas de regalo" }, "Con ideas") : null,
   );
   const actions = el(
     "span",

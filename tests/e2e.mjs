@@ -133,6 +133,13 @@ try {
   await early.fill("#enter-confirm", "PISTACHÉ");
   await early.click("#enter-submit");
   await early.getByText("El sorteo aún no empieza").waitFor();
+
+  log("participante: Ana escribe sus ideas de regalo antes del sorteo");
+  await early.locator("#my-wishes").waitFor();
+  await early.fill("#wishes-text", "Rompecabezas de 1000 piezas\n\n  Taza grande para café  \nhttps://example.com/bufanda-roja");
+  await early.click("#wishes-submit");
+  await early.getByText("Guardamos tus ideas de regalo").waitFor();
+  assert.equal(await early.inputValue("#wishes-text"), "Rompecabezas de 1000 piezas\nTaza grande para café\nhttps://example.com/bufanda-roja");
   await shot(early, "02-sorteo-cerrado-movil");
 
   log("admin: iniciar sorteo");
@@ -200,6 +207,36 @@ try {
   assert.deepEqual(Object.values(results).sort(), [...names].sort());
 
   // ---------------------------------------------------------------- recuperar
+  log("ideas: quien le regala a Ana ve sus ideas; los demás no");
+  const giverOfAna = Object.keys(results).find((g) => results[g] === "Ana López");
+  const gp = await (await browser.newContext({ ...devices["iPhone 13"] })).newPage();
+  await gp.goto(BASE + "#/recuperar");
+  await gp.fill("#recover-name", giverOfAna);
+  await gp.fill("#recover-secret", secrets[giverOfAna]);
+  await gp.click("#recover-submit");
+  assert.equal(await resultName(gp), "Ana López");
+  const ideas = await gp.locator("#receiver-ideas-list li").allInnerTexts();
+  assert.deepEqual(ideas, ["Rompecabezas de 1000 piezas", "Taza grande para café", "https://example.com/bufanda-roja"]);
+  assert.equal(await gp.locator("#receiver-ideas-list a").getAttribute("href"), "https://example.com/bufanda-roja");
+  assert.equal(await gp.locator("#receiver-ideas-list a").getAttribute("rel"), "noopener noreferrer nofollow");
+  await gp.locator("#my-wishes").waitFor();
+  await shot(gp, "09-resultado-con-ideas-movil");
+  await gp.context().close();
+  // Ana le regala a alguien que no escribió ideas: ve el aviso de "todavía no".
+  await early.reload();
+  await resultName(early);
+  await early.locator("#receiver-ideas-empty").waitFor();
+  // El texto de las ideas nunca llega a quien no le regala a Ana.
+  const notGiver = names.find((n) => n !== giverOfAna && n !== "Ana López");
+  const ng = await (await browser.newContext()).newPage();
+  await ng.goto(BASE + "#/recuperar");
+  await ng.fill("#recover-name", notGiver);
+  await ng.fill("#recover-secret", secrets[notGiver]);
+  await ng.click("#recover-submit");
+  await resultName(ng);
+  assert.ok(!(await ng.content()).includes("Rompecabezas"));
+  await ng.context().close();
+
   log("recuperar: respuesta incorrecta, luego correcta sin acentos ni mayúsculas");
   const rc = await (await browser.newContext({ ...devices["Pixel 7"] })).newPage();
   await rc.goto(BASE + "#/recuperar");
@@ -234,6 +271,9 @@ try {
   await admin.reload();
   await admin.locator("#panel-view").waitFor();
   assert.equal(await admin.locator("#stat-spun").textContent(), "5");
+  assert.equal(await admin.locator(".prow", { hasText: "Ana López" }).getByText("Con ideas").count(), 1);
+  assert.equal(await admin.getByText("Con ideas").count(), 1);
+  assert.ok(!(await admin.content()).includes("Rompecabezas"), "el panel no debe mostrar las ideas");
   await admin.click('[aria-label="Restablecer acceso de Lucía Gómez"]');
   await admin.click("dialog button[value=yes]");
   await admin.getByText("ya puede crear una nueva respuesta secreta").waitFor();

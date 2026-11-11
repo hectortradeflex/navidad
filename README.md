@@ -11,7 +11,8 @@ una respuesta secreta, gira una rueda animada y descubre a quién le regala.
 | **Inicio** (`index.html`) | Presenta el intercambio (nombre, fecha, lugar, presupuesto, mensaje y cuenta regresiva) y explica los pasos. |
 | **Participar** (`#/entrar`) | La persona escribe su nombre y crea una respuesta secreta. La primera vez se pide confirmarla. |
 | **Rueda** (`#/rueda`) | Rueda con adornos navideños, **sin nombres**. Gira, frena al azar y solo al detenerse muestra el resultado. |
-| **Resultado** (`#/resultado`) | "Tu amigo secreto es…", con confeti y los datos del intercambio. |
+| **Resultado** (`#/resultado`) | "Tu amigo secreto es…", con confeti, **sus ideas de regalo** y los datos del intercambio. |
+| **Tus ideas de regalo** | Tarjeta en la pantalla de la rueda y en la del resultado. Cada quien escribe qué le gustaría recibir, una idea por renglón (los enlaces de tiendas se pueden abrir). Se pueden cambiar en cualquier momento, incluso antes de que abra el sorteo. |
 | **Consultar resultado** (`#/recuperar`) | Con nombre y respuesta secreta se vuelve a ver el mismo resultado. **No se gira otra vez.** |
 | **Administración** (`admin.html`) | Con contraseña: agregar, corregir o quitar participantes, restablecer el acceso de quien olvidó su respuesta, abrir o reiniciar el sorteo y editar los datos de la página principal. |
 
@@ -30,6 +31,8 @@ una respuesta secreta, gira una rueda animada y descubre a quién le regala.
 ### Seguridad
 - Los resultados viven solo en el servidor (SQLite, fuera de la carpeta pública). **El panel de administración no
   los muestra**, para que quien organiza también pueda participar.
+- Las ideas de regalo de una persona solo las ve **quien le regala**, después de girar.
+  El panel solo indica quién ya escribió ideas («Con ideas»), no su contenido.
 - Las respuestas secretas se guardan solo como hash (`password_hash`). Al
   compararlas no importan mayúsculas, acentos ni espacios de más.
 - La contraseña del panel se crea en la primera visita a `admin.html` y se guarda como
@@ -133,6 +136,7 @@ La prueba arma un intercambio de 5 personas y revisa el flujo completo:
 
 - Creación y cambio de la contraseña del panel.
 - Registro y confirmación de la respuesta secreta.
+- Las ideas de regalo: solo las ve quien regala, y los enlaces se pueden abrir.
 - La rueda no muestra nombres mientras gira.
 - El sorteo es válido: nadie se regala a sí mismo y todos reciben un regalo.
 - Volver a entrar no vuelve a girar.

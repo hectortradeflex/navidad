@@ -92,6 +92,7 @@ async function route() {
   for (const sec of $$("[data-view]")) sec.hidden = sec.dataset.view !== view;
   window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
 
+  mountWishes(view);
   if (view === "rueda") showWheel();
   if (view === "resultado") showResult();
   if (view === "entrar") resetEnterForm();
@@ -177,7 +178,7 @@ $("#recover-form").addEventListener("submit", async (e) => {
     e.target.reset();
     setMe(res.me);
     state.freshReveal = false;
-    renderResult(res.receiver);
+    renderResult(res.receiver, res.receiverWishes);
     go("resultado");
   } catch (err) {
     setBusy(btn, false);
@@ -196,6 +197,7 @@ function showWheel() {
   $("#wheel-sub").hidden = !open;
   spinBtn.hidden = !open;
   spinBtn.disabled = spinning;
+  $("#wheel-status").hidden = !open;
   $("#wheel-status").textContent = "";
 }
 
@@ -253,7 +255,7 @@ async function startSpin() {
   wheel.hub.removeAttribute("aria-disabled");
   setMe({ ...state.me, spun: true });
   state.freshReveal = !result.alreadySpun;
-  renderResult(result.receiver);
+  renderResult(result.receiver, result.receiverWishes);
   go("resultado");
 }
 
@@ -269,18 +271,33 @@ wheel.hub.addEventListener("keydown", (e) => {
 // ------------------------------------------------------------------ resultado
 let shownReceiver = null;
 
-function renderResult(receiver) {
+function renderResult(receiver, wishes = "") {
   shownReceiver = receiver;
   $("#result-name").textContent = receiver || "";
+  $("#receiver-ideas-name").textContent = receiver || "";
+  const items = (wishes || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  $("#receiver-ideas-list").replaceChildren(...items.map((l) => el("li", {}, linkify(l))));
+  $("#receiver-ideas-list").hidden = items.length === 0;
+  $("#receiver-ideas-empty").hidden = items.length > 0;
+}
+
+/** Convierte los enlaces http(s) de una idea en ligas que abren en otra pestaña. */
+function linkify(text) {
+  return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+    i % 2
+      ? el("a", { href: part, target: "_blank", rel: "noopener noreferrer nofollow", text: part.length > 48 ? `${part.slice(0, 45)}…` : part })
+      : part,
+  );
 }
 
 async function showResult() {
   const card = $("#result-card");
-  if (!shownReceiver) {
+  const hadResult = !!shownReceiver;
+  if (!hadResult) {
     try {
       const res = await api("result");
       setMe(res.me);
-      renderResult(res.receiver);
+      renderResult(res.receiver, res.receiverWishes);
     } catch (err) {
       if (err.code === "not_spun") {
         setMe(err.data.me);
@@ -298,7 +315,58 @@ async function showResult() {
     state.freshReveal = false;
     confetti();
   }
+  if (hadResult) {
+    // Actualiza en silencio por si la otra persona agregó o cambió sus ideas.
+    try {
+      const res = await api("result");
+      renderResult(res.receiver, res.receiverWishes);
+    } catch {
+      /* se queda lo que ya se mostraba */
+    }
+  }
 }
+
+// ------------------------------------------------------------------ mis ideas de regalo
+const wishesCard = $("#my-wishes");
+const wishesText = $("#wishes-text");
+let wishesDirty = false;
+wishesText.addEventListener("input", () => (wishesDirty = true));
+
+function mountWishes(view) {
+  const slot = $(`[data-view="${view}"] .wishes-slot`);
+  if (!slot || !state.me) {
+    wishesCard.hidden = true;
+    return;
+  }
+  slot.append(wishesCard);
+  wishesCard.hidden = false;
+  $("#wishes-error").textContent = "";
+  if (!wishesDirty) wishesText.value = state.me.wishes || "";
+}
+
+$("#wishes-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const box = $("#wishes-error");
+  box.textContent = "";
+  const btn = $("#wishes-submit");
+  setBusy(btn, true, "Guardando…");
+  try {
+    const res = await api("wishes", { wishes: wishesText.value });
+    setMe(res.me);
+    wishesDirty = false;
+    wishesText.value = res.me.wishes;
+    toast(res.me.wishes ? "¡Listo! Guardamos tus ideas de regalo." : "Borraste tus ideas de regalo.");
+  } catch (err) {
+    if (err.code === "not_signed_in") {
+      setMe(null);
+      toast(err.message, "error");
+      return go("entrar");
+    }
+    showError(box, err.message);
+  } finally {
+    setBusy(btn, false);
+  }
+});
 
 // ------------------------------------------------------------------ salir
 for (const btn of $$('[data-action="leave"]')) {
@@ -311,6 +379,9 @@ for (const btn of $$('[data-action="leave"]')) {
     setMe(null);
     shownReceiver = null;
     renderResult(null);
+    wishesDirty = false;
+    wishesText.value = "";
+    wishesCard.hidden = true;
     toast("Sesión cerrada. ¡Feliz Navidad!");
     go("inicio");
   });
