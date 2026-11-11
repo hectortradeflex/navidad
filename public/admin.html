@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b3a26">
+  <title>Administración · Intercambio Navideño</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Mountains+of+Christmas:wght@700&display=swap">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="assets/admin.js"></script>
+</head>
+<body>
+  <svg width="0" height="0" class="sr-only" aria-hidden="true">
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 1.8l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.9l-6.4 3.5L7 14.3l-5.3-5 7.2-.9z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3zm3 4a2 2 0 0 1 1 3.7V19h-2v-1.3A2 2 0 0 1 12 14z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.3V21h3.7L17.8 9.9l-3.7-3.7zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M9 3h6l1 1h4v2H4V4h4zm-3 5h12l-1 13H7zm4 2v9h2v-9zm4 0v9h2v-9z"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><path d="M14 2a8 8 0 0 0-7.6 10.5L2 17v5h5v-3h3v-3h2l1.5-1.5A8 8 0 1 0 14 2zm2.5 7A1.5 1.5 0 1 1 18 7.5 1.5 1.5 0 0 1 16.5 9z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.2l-3.5-3.5L4 14.1 9 19 20 8l-1.4-1.4z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4 6.3 6.3 6.3-6.3z"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0 0 12 3.8 3 3 0 0 0 6.2 7H4a2 2 0 0 0-2 2v2a1 1 0 0 0 1 1h8V7h2v5h8a1 1 0 0 0 1-1V9a2 2 0 0 0-2-2zM9 7a1 1 0 1 1 1-1v1zm5 0V6a1 1 0 1 1 1 1zM3 13.5V20a2 2 0 0 0 2 2h6v-8.5zm10 8.5h6a2 2 0 0 0 2-2v-6.5h-8z"/></symbol>
+  </svg>
+
+  <div class="snow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <svg class="brand-star" aria-hidden="true"><use href="#i-star"/></svg>
+      <span class="brand-name">Administración</span>
+    </a>
+    <div class="who" id="admin-who" hidden>
+      <a href="index.html" target="_blank" rel="noopener">Ver sitio</a>
+      <span aria-hidden="true">·</span>
+      <button class="link-btn" type="button" id="logout">Cerrar sesión</button>
+    </div>
+  </header>
+  <div class="lights" aria-hidden="true"></div>
+
+  <main>
+    <!-- ================================================================ LOGIN -->
+    <section class="view" id="login-view" hidden>
+      <div class="card narrow">
+        <span class="eyebrow"><svg class="icon"><use href="#i-lock"/></svg> Acceso privado</span>
+        <h2>Panel de administración</h2>
+        <p class="lead">Aquí se arma la lista de participantes y se abre el sorteo. Los resultados
+          nunca se muestran en este panel: solo cada participante ve el suyo.</p>
+        <form class="form" id="login-form" novalidate>
+          <div class="field">
+            <label for="login-password">Contraseña de administración</label>
+            <div class="input-row">
+              <input type="password" id="login-password" autocomplete="current-password" required>
+              <button type="button" class="reveal-toggle" data-toggle="login-password">Mostrar</button>
+            </div>
+          </div>
+          <div class="notice error" id="login-error" role="alert"></div>
+          <button class="btn btn-green btn-big btn-block" type="submit" id="login-submit">Entrar al panel</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================================================================ PANEL -->
+    <section class="view" id="panel-view" hidden>
+      <div class="admin-grid">
+        <div class="admin-col">
+          <!-- Participantes -->
+          <div class="card">
+            <span class="eyebrow">Participantes</span>
+            <h2>Lista del intercambio</h2>
+            <p class="lead" id="list-lead">Agrega a cada persona con el nombre que usará para entrar.</p>
+
+            <form class="form" id="add-form" novalidate>
+              <div class="field">
+                <label for="add-names">Agregar nombres</label>
+                <textarea id="add-names" rows="4" placeholder="Ana López&#10;Carlos Ruiz&#10;María Fernanda"></textarea>
+                <span class="hint">Uno por línea (también puedes pegar una lista). No importan mayúsculas ni acentos al entrar.</span>
+              </div>
+              <div class="notice error" id="add-error" role="alert"></div>
+              <button class="btn btn-green" type="submit" id="add-submit">Agregar a la lista</button>
+            </form>
+
+            <ul class="plist" id="plist" aria-live="polite"></ul>
+          </div>
+        </div>
+
+        <div class="admin-col">
+          <!-- Sorteo -->
+          <div class="card">
+            <span class="eyebrow">Sorteo</span>
+            <h2>Estado del intercambio</h2>
+            <p><span class="badge" id="draw-badge"><span class="dot"></span><span id="draw-badge-text"></span></span></p>
+            <div class="stats">
+              <div class="stat"><b id="stat-total">0</b><span>Participantes</span></div>
+              <div class="stat"><b id="stat-registered">0</b><span>Registrados</span></div>
+              <div class="stat"><b id="stat-spun">0</b><span>Ya giraron</span></div>
+            </div>
+            <p class="muted" id="draw-help"></p>
+            <div class="actions">
+              <button class="btn btn-gold" type="button" id="draw-start"><svg class="icon"><use href="#i-gift"/></svg> Iniciar sorteo</button>
+              <button class="btn btn-ghost" type="button" id="draw-reset" hidden>Reiniciar sorteo</button>
+            </div>
+          </div>
+
+          <!-- Compartir -->
+          <div class="card">
+            <span class="eyebrow">Invitar</span>
+            <h2>Comparte el enlace</h2>
+            <p class="lead">Envía este enlace a los participantes para que entren a girar la rueda.</p>
+            <div class="share-row">
+              <input type="text" id="share-url" readonly aria-label="Enlace del intercambio">
+              <button class="btn btn-sm btn-green" type="button" id="share-copy">Copiar</button>
+            </div>
+          </div>
+
+          <!-- Datos -->
+          <div class="card">
+            <span class="eyebrow">Página principal</span>
+            <h2>Datos del intercambio</h2>
+            <form class="form" id="settings-form" novalidate>
+              <div class="field">
+                <label for="s-title">Nombre del intercambio</label>
+                <input type="text" id="s-title" maxlength="80" placeholder="Intercambio Navideño 2026">
+              </div>
+              <div class="row-2">
+                <div class="field">
+                  <label for="s-date">Fecha</label>
+                  <input type="date" id="s-date">
+                </div>
+                <div class="field">
+                  <label for="s-budget">Presupuesto</label>
+                  <input type="text" id="s-budget" maxlength="40" placeholder="$500 MXN">
+                </div>
+              </div>
+              <div class="field">
+                <label for="s-place">Lugar</label>
+                <input type="text" id="s-place" maxlength="100" placeholder="Casa de la abuela">
+              </div>
+              <div class="field">
+                <label for="s-message">Mensaje para los participantes</label>
+                <textarea id="s-message" maxlength="600" rows="3" placeholder="¡Trae tu regalo envuelto y con el nombre de quien lo recibe!"></textarea>
+              </div>
+              <button class="btn btn-green" type="submit" id="settings-submit">Guardar cambios</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p><a href="index.html">Volver al sitio del intercambio</a></p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta name="theme-color" content="#0b3a26">
+  <meta name="description" content="Gira la rueda y descubre a quién le darás un regalo en el intercambio navideño.">
+  <title>Intercambio Navideño</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Mountains+of+Christmas:wght@700&display=swap">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="assets/app.js"></script>
+</head>
+<body>
+  <!-- Íconos -->
+  <svg width="0" height="0" class="sr-only" aria-hidden="true">
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 1.8l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.9l-6.4 3.5L7 14.3l-5.3-5 7.2-.9z"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0 0 12 3.8 3 3 0 0 0 6.2 7H4a2 2 0 0 0-2 2v2a1 1 0 0 0 1 1h8V7h2v5h8a1 1 0 0 0 1-1V9a2 2 0 0 0-2-2zM9 7a1 1 0 1 1 1-1v1zm5 0V6a1 1 0 1 1 1 1zM3 13.5V20a2 2 0 0 0 2 2h6v-8.5zm10 8.5h6a2 2 0 0 0 2-2v-6.5h-8z"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1zM4 10v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9zm3 3h3v3H7z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M21.4 11.6l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8A1.5 1.5 0 1 1 8 6.5 1.5 1.5 0 0 1 6.5 8z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3zm3 4a2 2 0 0 1 1 3.7V19h-2v-1.3A2 2 0 0 1 12 14z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M11 1h2v4.6l2.3-2.3 1.4 1.4L13 8.4v2.9l2.5-1.5 1.3-5 1.9.5-.8 3.1 4-2.3 1 1.7-4 2.3 3.1.8-.5 1.9-5-1.3L14 12l2.5 1.5 5-1.3.5 1.9-3.1.8 4 2.3-1 1.7-4-2.3.8 3.1-1.9.5-1.3-5L13 12.7v2.9l3.7 3.7-1.4 1.4-2.3-2.3V23h-2v-4.6l-2.3 2.3-1.4-1.4 3.7-3.7v-2.9l-2.5 1.5-1.3 5-1.9-.5.8-3.1-4 2.3-1-1.7 4-2.3-3.1-.8.5-1.9 5 1.3L10 12l-2.5-1.5-5 1.3L2 9.9l3.1-.8-4-2.3 1-1.7 4 2.3-.8-3.1 1.9-.5 1.3 5L11 11.3V8.4L7.3 4.7l1.4-1.4L11 5.6z"/></symbol>
+  </svg>
+
+  <div class="snow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#/">
+      <svg class="brand-star" aria-hidden="true"><use href="#i-star"/></svg>
+      <span class="brand-name" data-bind="title">Intercambio Navideño</span>
+    </a>
+    <div class="who" id="who" hidden>
+      <span class="who-greet">Hola, <b data-bind="me-name"></b></span>
+      <button class="link-btn" type="button" data-action="leave">Salir</button>
+    </div>
+  </header>
+  <div class="lights" aria-hidden="true"></div>
+
+  <main id="main">
+    <!-- ================================================================ INICIO -->
+    <section class="view" data-view="inicio" aria-labelledby="t-inicio">
+      <div class="welcome-back" id="welcome-back" hidden>
+        <span>¡Hola de nuevo, <b data-bind="me-name"></b>! Tu sesión sigue abierta.</span>
+        <a class="btn btn-gold btn-sm" href="#/rueda" id="welcome-go">Continuar</a>
+      </div>
+
+      <div class="hero">
+        <div>
+          <span class="hero-kicker"><svg class="icon"><use href="#i-snow"/></svg> Amigo secreto</span>
+          <h1 id="t-inicio" data-bind="title">Intercambio Navideño</h1>
+          <p class="hero-text">Gira la rueda y descubre a quién le darás un regalo este año.
+            Tu resultado es secreto: solo tú lo verás, y puedes volver a consultarlo cuando quieras.</p>
+
+          <ul class="chips" id="hero-chips"></ul>
+          <p class="hero-message" id="hero-message" hidden></p>
+
+          <div class="actions">
+            <a class="btn btn-big" href="#/entrar"><svg class="icon"><use href="#i-gift"/></svg> Participar</a>
+            <a class="btn btn-ghost btn-big" href="#/recuperar">Ya giré: ver mi resultado</a>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <svg class="mini-wheel" id="mini-wheel" viewBox="-210 -210 420 420"></svg>
+        </div>
+      </div>
+
+      <h2 class="section-title">¿Cómo funciona?</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-num">1</span>
+          <h3>Escribe tu nombre</h3>
+          <p>Tal como lo registró quien organiza el intercambio.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">2</span>
+          <h3>Crea tu respuesta secreta</h3>
+          <p>Algo que solo tú sepas y puedas recordar. Con ella vuelves a ver tu resultado.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">3</span>
+          <h3>Gira la rueda</h3>
+          <p>Cuando se detenga, descubrirás a quién le toca tu regalo. ¡Guarda el secreto!</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ ENTRAR -->
+    <section class="view" data-view="entrar" hidden aria-labelledby="t-entrar">
+      <div class="card narrow">
+        <span class="eyebrow"><svg class="icon"><use href="#i-gift"/></svg> Participar</span>
+        <h2 id="t-entrar">Entra al intercambio</h2>
+        <p class="lead">Escribe tu nombre y una respuesta secreta. La primera vez la guardamos;
+          después te servirá para volver a ver tu resultado.</p>
+
+        <form class="form" id="enter-form" novalidate>
+          <div class="field">
+            <label for="enter-name">Tu nombre</label>
+            <input type="text" id="enter-name" name="name" autocomplete="off" autocapitalize="words" maxlength="60" required>
+          </div>
+          <div class="field">
+            <label for="enter-secret">Tu respuesta secreta</label>
+            <div class="input-row">
+              <input type="password" id="enter-secret" name="secret" autocomplete="off" maxlength="100" required>
+              <button type="button" class="reveal-toggle" data-toggle="enter-secret">Mostrar</button>
+            </div>
+            <span class="hint">Por ejemplo: tu postre favorito o el nombre de tu primera mascota.
+              No importan mayúsculas ni acentos.</span>
+          </div>
+
+          <div class="notice gold" id="enter-confirm-note" hidden>
+            <svg class="icon"><use href="#i-star"/></svg>
+            <span>¡Hola, <b id="enter-confirm-name"></b>! Es tu primera vez. Escribe tu respuesta secreta otra vez para guardarla.</span>
+          </div>
+          <div class="field" id="enter-confirm-field" hidden>
+            <label for="enter-confirm">Confirma tu respuesta secreta</label>
+            <input type="password" id="enter-confirm" name="confirm" autocomplete="off" maxlength="100">
+          </div>
+
+          <div class="notice error" id="enter-error" role="alert"></div>
+          <button class="btn btn-big btn-block" type="submit" id="enter-submit">Entrar</button>
+          <p class="muted">¿Ya giraste la rueda? <a href="#/recuperar" class="link-green">Consulta tu resultado</a>.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================================================================ RUEDA -->
+    <section class="view wheel-page" data-view="rueda" hidden aria-labelledby="t-rueda">
+      <h1 id="t-rueda">¡Hola, <span data-bind="me-name"></span>!</h1>
+      <p class="sub" id="wheel-sub">Gira la rueda para descubrir a quién le darás un regalo.
+        El nombre aparecerá cuando se detenga.</p>
+
+      <div class="card wheel-closed" id="wheel-closed" hidden>
+        <span class="eyebrow"><svg class="icon"><use href="#i-info"/></svg> Un momento</span>
+        <h2>El sorteo aún no empieza</h2>
+        <p class="lead">Ya quedaste registrado. Cuando quien organiza abra el sorteo, vuelve aquí y gira la rueda.</p>
+        <div class="actions">
+          <button class="btn btn-green" type="button" id="wheel-recheck">Volver a revisar</button>
+          <a class="btn btn-ghost" href="#/">Ir al inicio</a>
+        </div>
+      </div>
+
+      <div class="wheel-stage" id="wheel-stage">
+        <div class="wheel-glow"></div>
+        <svg class="wheel-svg" id="wheel" viewBox="-215 -235 430 450" role="img" aria-label="Rueda del intercambio"></svg>
+      </div>
+      <button class="btn btn-gold btn-big" type="button" id="spin-btn">
+        <svg class="icon"><use href="#i-star"/></svg> ¡Girar la rueda!
+      </button>
+      <p class="wheel-status" id="wheel-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- ================================================================ RESULTADO -->
+    <section class="view" data-view="resultado" hidden aria-labelledby="t-resultado">
+      <div class="card result-card" id="result-card">
+        <svg class="gift-badge" viewBox="0 0 100 100" aria-hidden="true">
+          <rect x="14" y="40" width="72" height="52" rx="6" fill="#c1272d"/>
+          <rect x="8" y="28" width="84" height="18" rx="5" fill="#d8343a"/>
+          <rect x="44" y="28" width="12" height="64" fill="#f3d685"/>
+          <path d="M50 28c-6-14-24-18-24-6 0 7 12 7 24 6zm0 0c6-14 24-18 24-6 0 7-12 7-24 6z" fill="#d9a62e"/>
+          <circle cx="50" cy="28" r="5" fill="#a87a12"/>
+        </svg>
+        <p class="result-label" id="t-resultado"><span data-bind="me-name"></span>, tu amigo secreto es…</p>
+        <p class="result-name" id="result-name"></p>
+        <ul class="chips" id="result-chips"></ul>
+        <div class="notice gold">
+          <svg class="icon"><use href="#i-lock"/></svg>
+          <span>Es un secreto: no se lo cuentes a nadie. Si lo olvidas, vuelve a esta página con tu nombre y tu respuesta secreta.</span>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" data-action="leave">Listo, cerrar sesión</button>
+          <a class="btn btn-ghost" href="#/">Ir al inicio</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ RECUPERAR -->
+    <section class="view" data-view="recuperar" hidden aria-labelledby="t-recuperar">
+      <div class="card narrow">
+        <span class="eyebrow"><svg class="icon"><use href="#i-lock"/></svg> Consultar resultado</span>
+        <h2 id="t-recuperar">Vuelve a ver a quién le regalas</h2>
+        <p class="lead">Escribe tu nombre y la respuesta secreta que creaste. No se vuelve a girar la rueda:
+          verás el mismo resultado de antes.</p>
+
+        <form class="form" id="recover-form" novalidate>
+          <div class="field">
+            <label for="recover-name">Tu nombre</label>
+            <input type="text" id="recover-name" name="name" autocomplete="off" autocapitalize="words" maxlength="60" required>
+          </div>
+          <div class="field">
+            <label for="recover-secret">Tu respuesta secreta</label>
+            <div class="input-row">
+              <input type="password" id="recover-secret" name="secret" autocomplete="off" maxlength="100" required>
+              <button type="button" class="reveal-toggle" data-toggle="recover-secret">Mostrar</button>
+            </div>
+          </div>
+          <div class="notice error" id="recover-error" role="alert"></div>
+          <button class="btn btn-green btn-big btn-block" type="submit" id="recover-submit">Ver mi resultado</button>
+          <p class="muted">¿Olvidaste tu respuesta? Pide a quien organiza que restablezca tu acceso.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Hecho con cariño para compartir esta Navidad · <a href="admin.html">Administración</a></p>
+  </footer>
+</body>
+</html>

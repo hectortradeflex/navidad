@@ -1,0 +1,244 @@
+// Prueba de punta a punta: PHP embebido + Chromium (Playwright).
+//   node tests/e2e.mjs            (requiere php 8 con pdo_sqlite y playwright)
+//   SHOTS=carpeta node tests/e2e.mjs   guarda capturas de pantalla
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+
+// require() respeta NODE_PATH, así funciona con Playwright instalado global o localmente.
+const { chromium, devices } = createRequire(import.meta.url)("playwright");
+
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "intercambio-"));
+const PORT = 8000 + Math.floor(Math.random() * 900);
+const BASE = `http://127.0.0.1:${PORT}/`;
+const ADMIN_PW = "renos-y-trineos-2026";
+const SHOTS = process.env.SHOTS;
+
+const php = spawn("php", ["-S", `127.0.0.1:${PORT}`, "-t", root], {
+  env: { ...process.env, INTERCAMBIO_ADMIN_PASSWORD: ADMIN_PW, INTERCAMBIO_DATA_DIR: dataDir },
+  stdio: ["ignore", "ignore", "pipe"],
+});
+let phpErr = "";
+php.stderr.on("data", (d) => (phpErr += d));
+
+const browser = await chromium.launch();
+let step = "";
+const log = (s) => {
+  step = s;
+  console.log("·", s);
+};
+// Espera a que la pantalla de resultado muestre un nombre y lo devuelve.
+const resultName = async (page) => {
+  await page.locator('[data-view="resultado"]').waitFor({ timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector("#result-name").textContent.trim() !== "");
+  return (await page.locator("#result-name").textContent()).trim();
+};
+const shot = async (page, name) => SHOTS && page.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: true });
+
+try {
+  for (let i = 0; i < 50; i++) {
+    try {
+      await fetch(BASE);
+      break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+
+  const names = ["Ana López", "José Pérez", "Carlos Ruiz", "María Fernanda", "Lucía Gómez"];
+  const secrets = { "Ana López": "pistache", "José Pérez": "Firulais", "Carlos Ruiz": "tamales", "María Fernanda": "rosca de reyes", "Lucía Gómez": "nieve" };
+
+  // ---------------------------------------------------------------- admin
+  log("admin: contraseña incorrecta y correcta");
+  const adminCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const admin = await adminCtx.newPage();
+  await admin.goto(BASE + "admin.html");
+  await admin.fill("#login-password", "equivocada");
+  await admin.click("#login-submit");
+  await admin.getByText("Contraseña incorrecta").waitFor();
+  await admin.fill("#login-password", ADMIN_PW);
+  await admin.click("#login-submit");
+  await admin.locator("#panel-view").waitFor();
+
+  log("admin: agregar participantes y detectar duplicados");
+  await admin.fill("#add-names", names.join("\n") + "\nana lopez");
+  await admin.click("#add-submit");
+  await admin.getByText("Ya estaban en la lista").waitFor();
+  assert.equal(await admin.locator("#plist .prow").count(), 5);
+  assert.equal(await admin.locator("#stat-total").textContent(), "5");
+
+  log("admin: datos del intercambio");
+  await admin.fill("#s-title", "Intercambio Navideño 2026");
+  await admin.fill("#s-date", "2026-12-20");
+  await admin.fill("#s-budget", "$500 MXN");
+  await admin.fill("#s-place", "Oficina TradeFlex");
+  await admin.fill("#s-message", "¡Trae tu regalo envuelto!");
+  await admin.click("#settings-submit");
+  await admin.getByText("Datos guardados").waitFor();
+
+  // ---------------------------------------------------------------- participante antes del sorteo
+  log("participante: se registra antes de que abra el sorteo");
+  const early = await (await browser.newContext({ ...devices["iPhone 13"] })).newPage();
+  await early.goto(BASE);
+  await early.getByRole("heading", { name: "Intercambio Navideño 2026" }).waitFor();
+  await early.locator("#hero-chips").getByText("Presupuesto: $500 MXN").waitFor();
+  await shot(early, "01-inicio-movil");
+  await early.click("text=Participar");
+  await early.fill("#enter-name", "Personaje Inventado");
+  await early.fill("#enter-secret", "lo que sea");
+  await early.click("#enter-submit");
+  await early.getByText("No encontramos «Personaje Inventado»").waitFor();
+  await early.fill("#enter-name", "ANA LOPEZ");
+  await early.fill("#enter-secret", secrets["Ana López"]);
+  await early.click("#enter-submit");
+  await early.locator("#enter-confirm-field").waitFor();
+  await early.fill("#enter-confirm", "otra cosa");
+  await early.click("#enter-submit");
+  await early.getByText("no coinciden").waitFor();
+  await early.fill("#enter-confirm", "PISTACHÉ");
+  await early.click("#enter-submit");
+  await early.getByText("El sorteo aún no empieza").waitFor();
+  await shot(early, "02-sorteo-cerrado-movil");
+
+  log("admin: iniciar sorteo");
+  await admin.click("#draw-start");
+  await admin.click("dialog button[value=yes]");
+  await admin.locator("#draw-badge-text", { hasText: "Sorteo abierto" }).waitFor();
+  assert.equal(await admin.locator("#add-form").isHidden(), true);
+  assert.equal(await admin.locator(".icon-btn.danger").first().isDisabled(), true);
+  await shot(admin, "03-admin");
+
+  log("admin: el estado no expone resultados");
+  const stateJson = await admin.evaluate(async () => (await fetch("api.php?action=admin_state")).text());
+  assert.ok(!/receiver/i.test(stateJson), "admin_state no debe incluir receptores");
+
+  // ---------------------------------------------------------------- girar
+  const results = {};
+
+  log("participante: Ana gira (animación completa) y el nombre no aparece hasta el final");
+  await early.click("#wheel-recheck");
+  await early.locator("#spin-btn").waitFor();
+  await shot(early, "04-rueda-movil");
+  await early.click("#spin-btn");
+  await early.waitForTimeout(1500);
+  assert.equal(await early.locator('[data-view="resultado"]').isHidden(), true);
+  assert.equal(await early.locator("#wheel text").count(), 0, "la rueda no debe tener textos");
+  const visibleText = await early.locator("body").innerText();
+  for (const n of names.filter((n) => n !== "Ana López")) assert.ok(!visibleText.includes(n), `«${n}» visible durante el giro`);
+  results["Ana López"] = await resultName(early);
+  await early.waitForTimeout(800);
+  await shot(early, "05-resultado-movil");
+
+  for (const n of names.slice(1)) {
+    log(`participante: ${n} entra y gira`);
+    const ctx = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1280, height: 900 } });
+    const p = await ctx.newPage();
+    await p.goto(BASE + "#/entrar");
+    await p.fill("#enter-name", n);
+    await p.fill("#enter-secret", secrets[n]);
+    await p.click("#enter-submit");
+    await p.locator("#enter-confirm").waitFor();
+    await p.fill("#enter-confirm", secrets[n]);
+    await p.click("#enter-submit");
+    await p.locator("#spin-btn").waitFor();
+    if (n === "José Pérez") await shot(p, "06-rueda-escritorio");
+    await p.click("#spin-btn");
+    results[n] = await resultName(p);
+    if (n === "José Pérez") await shot(p, "07-resultado-escritorio");
+
+    // Volver a entrar no vuelve a girar: lleva directo al mismo resultado.
+    await p.reload();
+    assert.equal(await resultName(p), results[n]);
+    const again = await p.evaluate(async () => {
+      const info = await (await fetch("api.php?action=info")).json();
+      const r = await fetch("api.php?action=spin", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": info.csrf }, body: "{}" });
+      return r.json();
+    });
+    assert.equal(again.alreadySpun, true);
+    assert.equal(again.receiver, results[n]);
+    await ctx.close();
+  }
+
+  log("sorteo válido: nadie se regala a sí mismo y todos reciben un regalo");
+  console.log("  ", results);
+  for (const [giver, receiver] of Object.entries(results)) assert.notEqual(giver, receiver);
+  assert.deepEqual(Object.values(results).sort(), [...names].sort());
+
+  // ---------------------------------------------------------------- recuperar
+  log("recuperar: respuesta incorrecta, luego correcta sin acentos ni mayúsculas");
+  const rc = await (await browser.newContext({ ...devices["Pixel 7"] })).newPage();
+  await rc.goto(BASE + "#/recuperar");
+  await rc.fill("#recover-name", "jose perez");
+  await rc.fill("#recover-secret", "equivocada");
+  await rc.click("#recover-submit");
+  await rc.getByText("Te quedan 5 intentos").waitFor();
+  await shot(rc, "08-recuperar-error-movil");
+  await rc.fill("#recover-secret", "firulais");
+  await rc.click("#recover-submit");
+  assert.equal(await resultName(rc), results["José Pérez"]);
+  await rc.click('[data-view="resultado"] >> text=Listo, cerrar sesión');
+  await rc.getByText("Sesión cerrada").waitFor();
+  await rc.goto(BASE + "#/resultado");
+  await rc.locator('[data-view="entrar"]').waitFor();
+
+  log("bloqueo tras varios intentos fallidos");
+  await rc.goto(BASE + "#/recuperar");
+  await rc.fill("#recover-name", "Carlos Ruiz");
+  for (let i = 0; i < 6; i++) {
+    const left = 5 - i;
+    await rc.fill("#recover-secret", `mal-${i}`);
+    await rc.click("#recover-submit");
+    await rc.getByText(left > 0 ? `Te quedan ${left} intento` : "espera 15 minutos").waitFor();
+  }
+  await rc.fill("#recover-secret", secrets["Carlos Ruiz"]);
+  await rc.click("#recover-submit");
+  await rc.getByText("Demasiados intentos").waitFor();
+
+  // ---------------------------------------------------------------- restablecer acceso
+  log("admin: restablecer acceso; el resultado se conserva");
+  await admin.reload();
+  await admin.locator("#panel-view").waitFor();
+  assert.equal(await admin.locator("#stat-spun").textContent(), "5");
+  await admin.click('[aria-label="Restablecer acceso de Lucía Gómez"]');
+  await admin.click("dialog button[value=yes]");
+  await admin.getByText("ya puede crear una nueva respuesta secreta").waitFor();
+
+  const lu = await (await browser.newContext()).newPage();
+  await lu.goto(BASE + "#/entrar");
+  await lu.fill("#enter-name", "lucia gomez");
+  await lu.fill("#enter-secret", "nueva respuesta");
+  await lu.click("#enter-submit");
+  await lu.locator("#enter-confirm").waitFor();
+  await lu.fill("#enter-confirm", "nueva respuesta");
+  await lu.click("#enter-submit");
+  assert.equal(await resultName(lu), results["Lucía Gómez"]);
+
+  log("admin: renombrar y reiniciar sorteo");
+  await admin.click('[aria-label="Editar a Carlos Ruiz"]');
+  await admin.fill("#plist input", "Carlos Ruiz Díaz");
+  await admin.keyboard.press("Enter");
+  await admin.getByText("Nombre actualizado").waitFor();
+  await admin.click("#draw-reset");
+  await admin.click("dialog button[value=yes]");
+  await admin.getByText("Sorteo sin iniciar").waitFor();
+  assert.equal(await admin.locator("#stat-spun").textContent(), "0");
+
+  log("seguridad: escrituras sin token CSRF se rechazan y la base no se descarga");
+  const noCsrf = await fetch(BASE + "api.php?action=admin_draw_start", { method: "POST", body: "{}" });
+  assert.equal(noCsrf.status, 403);
+
+  console.log("\n✔ Todas las pruebas pasaron");
+} catch (err) {
+  console.error(`\n✘ Falló en: ${step}\n`, err);
+  if (phpErr.includes("PHP")) console.error(phpErr.split("\n").filter((l) => /PHP|error/i.test(l)).join("\n"));
+  process.exitCode = 1;
+} finally {
+  await browser.close();
+  php.kill();
+  fs.rmSync(dataDir, { recursive: true, force: true });
+}

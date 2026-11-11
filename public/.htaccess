@@ -1,0 +1,37 @@
+# Intercambio Navideño · configuración para Hostinger (Apache / LiteSpeed)
+
+Options -Indexes
+DirectoryIndex index.html
+
+# Nunca servir: archivos ocultos, la configuración ni la base de datos.
+<FilesMatch "^(\.|config\.php$)|\.(sqlite|sqlite3|db|md|sh|log)$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/(.*/)?data(/|$)
+
+AddType application/javascript .js
+AddType image/svg+xml .svg
+AddCharset utf-8 .html .js .css
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "same-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript image/svg+xml application/json
+</IfModule>
+
+# Fuerza HTTPS (la sesión y las respuestas secretas viajan cifradas).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
