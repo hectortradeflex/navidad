@@ -51,12 +51,9 @@ ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 ini_set('session.gc_maxlifetime', '14400');
 session_name('intercambio');
-// La cookie se limita a la carpeta del sitio (p. ej. /navidad/) para no mezclarse con
-// otras aplicaciones del mismo dominio.
-$cookiePath = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/'))), '/') . '/';
 session_set_cookie_params([
     'lifetime' => 0,
-    'path' => $cookiePath,
+    'path' => '/',
     'secure' => $https,
     'httponly' => true,
     'samesite' => 'Strict',
@@ -68,12 +65,9 @@ if (empty($_SESSION['csrf'])) {
 
 // ------------------------------------------------------------------ base de datos
 /**
- * Dónde vive la base de datos. Por defecto, FUERA de la carpeta pública del dominio
- * (public_html): algunos despliegues (como el "estático" de Hostinger) reemplazan la
- * carpeta del sitio y borrarían a los participantes y el sorteo, y fuera de
- * public_html nadie la puede descargar.
- *   sitio en public_html/          → <dominio>/intercambio-datos/
- *   sitio en public_html/navidad/  → <dominio>/intercambio-datos-navidad/
+ * Dónde vive la base de datos. Por defecto, FUERA de la carpeta del sitio: algunos
+ * despliegues (como el "estático" de Hostinger) reemplazan toda la carpeta del sitio y
+ * borrarían a los participantes y el sorteo.
  */
 function data_dir(): string
 {
@@ -82,30 +76,8 @@ function data_dir(): string
     if ($configured !== '') {
         return rtrim($configured, '/');
     }
-
-    $here = realpath(__DIR__) ?: __DIR__;
-    $docroot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? '')) ?: '';
-    if ($docroot !== '' && str_starts_with($here . '/', rtrim($docroot, '/') . '/')) {
-        // Instalado dentro de la carpeta pública (en la raíz o en una subcarpeta).
-        $base = dirname($docroot);
-        $sub = trim(substr($here, strlen(rtrim($docroot, '/'))), '/');
-        $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($sub)) ?? '', '-');
-        $outside = $base . '/intercambio-datos' . ($slug !== '' ? "-$slug" : '');
-    } else {
-        $base = dirname($here);
-        $outside = $base . '/intercambio-datos';
-    }
-
-    // Compatibilidad: una versión anterior guardaba la base junto a la carpeta del sitio.
-    $legacy = dirname($here) . '/intercambio-datos';
-    if ($legacy !== $outside && is_file("$legacy/intercambio.sqlite") && !is_file("$outside/intercambio.sqlite")) {
-        if ((is_dir($outside) || @mkdir($outside, 0700, true)) && @rename("$legacy/intercambio.sqlite", "$outside/intercambio.sqlite")) {
-            return $outside;
-        }
-        return $legacy;
-    }
-
-    if (is_dir($outside) ? is_writable($outside) : is_writable($base)) {
+    $outside = dirname(__DIR__) . '/intercambio-datos';
+    if (is_dir($outside) ? is_writable($outside) : is_writable(dirname(__DIR__))) {
         return $outside;
     }
     return __DIR__ . '/data';
