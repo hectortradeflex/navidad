@@ -14,8 +14,9 @@ return [
     'admin_password' => getenv('INTERCAMBIO_ADMIN_PASSWORD') ?: '',
 
     // Carpeta donde se guarda la base de datos (un archivo SQLite).
-    // Si puedes, apúntala a una carpeta FUERA de public_html, por ejemplo:
-    //   'data_dir' => dirname(__DIR__) . '/intercambio-datos',
-    // Si la dejas aquí, el .htaccess impide descargarla y Git no la toca al actualizar.
-    'data_dir' => getenv('INTERCAMBIO_DATA_DIR') ?: __DIR__ . '/data',
+    // Vacío = automático: una carpeta "intercambio-datos" JUNTO a public_html (fuera
+    // de ella), para que sobreviva cuando un despliegue reemplaza todo public_html.
+    // Si el hosting no deja escribir ahí, se usa "data/" dentro del sitio (protegida
+    // por .htaccess). También puedes poner una ruta fija.
+    'data_dir' => getenv('INTERCAMBIO_DATA_DIR') ?: '',
 ];

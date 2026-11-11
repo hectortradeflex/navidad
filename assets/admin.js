@@ -19,7 +19,10 @@ async function init() {
     }
     setupMode = !!info.adminSetup;
   } catch (err) {
-    if (err.code !== "admin_required") toast(err.message, "error");
+    if (err.code !== "admin_required") {
+      showLogin();
+      return $("#login-error").replaceChildren(el("span", { text: err.message }));
+    }
   }
   showLogin();
 }

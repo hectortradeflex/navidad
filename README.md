@@ -28,7 +28,7 @@ una respuesta secreta, gira una rueda animada y descubre a quién le regala.
   todas las asignaciones, y todos vuelven a girar.
 
 ### Seguridad
-- Los resultados viven solo en el servidor (SQLite). **El panel de administración no
+- Los resultados viven solo en el servidor (SQLite, fuera de la carpeta pública). **El panel de administración no
   los muestra**, para que quien organiza también pueda participar.
 - Las respuestas secretas se guardan solo como hash (`password_hash`). Al
   compararlas no importan mayúsculas, acentos ni espacios de más.
@@ -54,7 +54,7 @@ config.php            opciones (normalmente no hay que tocarlo)
 .htaccess             seguridad, caché y HTTPS
 assets/               styles.css, app.js, admin.js, wheel.js, common.js, favicon.svg
 tests/e2e.mjs         prueba de punta a punta (no se sirve en la web)
-data/                 se crea sola en el servidor con la base de datos (no va en git)
+(intercambio-datos/)   se crea sola junto a public_html con la base de datos (no va en git)
 ```
 
 Es HTML, CSS y JavaScript sin compilar, más un archivo PHP. No usa dependencias ni
@@ -62,59 +62,56 @@ Es HTML, CSS y JavaScript sin compilar, más un archivo PHP. No usa dependencias
 
 ## Publicar en Hostinger
 
-> ⚠️ **No uses «Aplicación web Node.js → Importar repositorio».** Ese flujo es para
-> sitios de Node o estáticos. Si eliges **«Desplegar como estático»**, las páginas se ven,
-> pero `api.php` no se ejecuta y no funciona ni el registro, ni la rueda, ni el panel.
-> Este sitio necesita un **sitio web normal con PHP**, como `media.tradeflexgroup.com`.
+El sitio necesita **PHP 8 o superior** con **pdo_sqlite** (Hostinger los trae activos
+por defecto). La base de datos se guarda **fuera** de la carpeta del sitio, en
+`intercambio-datos/`, junto a `public_html`. Así, aunque un despliegue reemplace todo
+`public_html`, no se pierden los participantes, el sorteo ni la contraseña.
 
-### Opción A · Desde GitHub con la herramienta Git de hPanel (recomendada)
+### Opción A · «Importar repositorio» → «Desplegar como estático»
 
-Los archivos del sitio están en la raíz del repositorio, así que se clonan tal cual en
-`public_html`.
-
-1. **Crea el sitio.** En hPanel, agrega un subdominio o sitio vacío, por ejemplo
-   `navidad.tradeflexgroup.com`, **sin** conectarlo como aplicación Node.js. Activa el
-   SSL en *Seguridad → SSL*.
-2. **Revisa PHP.** En *Avanzado → Configuración de PHP*, usa PHP **8.0 o superior** y
-   confirma que estén activas **pdo_sqlite** y **mbstring**. Vienen activas por defecto.
-3. **Vacía `public_html`.** Hostinger pide la carpeta vacía para el primer despliegue.
-   Si tiene un archivo de bienvenida, como `default.php`, bórralo desde el
-   *Administrador de archivos*.
-4. **Conecta el repositorio.** Ve a *Avanzado → GIT*:
-   - **Repositorio:** si es privado, `git@github.com:hectortradeflex/navidad.git`; si es
-     público, `https://github.com/hectortradeflex/navidad.git`.
-   - **Rama:** `main`.
-   - **Directorio:** déjalo vacío, para que se instale en `public_html`.
-   - **Si el repo es privado:** en esa misma página, hPanel muestra una **clave SSH**.
-     Cópiala y agrégala en GitHub, en el repo *navidad → Settings → Deploy keys →
-     Add deploy key*. Solo necesita lectura.
-   - Pulsa **Crear** y luego **Desplegar**.
-5. **Actualizaciones automáticas (opcional).** En *Avanzado → GIT*, activa
-   *Implementación automática* y copia la URL del webhook. Pégala en GitHub, en
-   *Settings → Webhooks → Add webhook*, como *Payload URL*. Desde entonces, cada cambio
-   en `main` se publica solo.
-6. **Crea tu contraseña.** Abre `https://navidad.tradeflexgroup.com/admin.html`. La
-   primera vez, el panel te pide **crear la contraseña** (mínimo 8 caracteres). Hazlo
-   enseguida, antes de compartir el enlace: la contraseña la fija quien entre primero.
-7. Agrega a los participantes, llena los datos del intercambio, pulsa
+1. En hPanel: *Sitios web → Agregar sitio web → Aplicación web Node.js → Importar
+   repositorio de Git*. Elige **hectortradeflex/navidad**, rama **main**.
+2. Hostinger avisa que no encontró `package.json`. Es normal: este sitio no usa Node.
+   Pulsa **Desplegar como estático**. Si pide directorio de salida, deja la raíz.
+3. Asigna el dominio, por ejemplo `navidad.tradeflexgroup.com`, y activa el SSL.
+4. Abre `https://navidad.tradeflexgroup.com/admin.html`:
+   - Si aparece **«Primera vez: crea la contraseña del panel»**, todo funciona. Créala
+     enseguida, antes de compartir el enlace: la contraseña la fija quien entre primero.
+   - Si aparece **«El servidor no está ejecutando PHP»**, ese tipo de sitio no ejecuta
+     PHP. Usa la opción B.
+5. Agrega a los participantes, llena los datos del intercambio, pulsa
    **Iniciar sorteo** y comparte el enlace con el botón **Copiar**.
 
-Al actualizar desde Git, los datos no se pierden. La base vive en `data/`, que no está
-en el repositorio, y la contraseña se guarda en esa base, no en un archivo. **No edites
-archivos del sitio en el servidor**, porque el siguiente despliegue podría fallar. Para
-respaldar, descarga `data/intercambio.sqlite`.
+Cada cambio que llegue a `main` se vuelve a publicar solo, y los datos se conservan.
 
-### Opción B · Subir los archivos a mano
+### Opción B · Sitio web normal + herramienta Git de hPanel
 
-En GitHub, pulsa *Code → Download ZIP*. En el *Administrador de archivos* de Hostinger,
-sube el ZIP a `public_html` y extráelo de modo que `index.html`, `api.php` y
-`.htaccess` queden directamente en `public_html`. Sigue después desde el paso 6 de la
-opción A.
+1. Crea un sitio o subdominio normal, **no** una aplicación Node.js, con SSL y PHP 8
+   (*Avanzado → Configuración de PHP*).
+2. Si `public_html` tiene un archivo de bienvenida, como `default.php`, bórralo.
+   Hostinger pide la carpeta vacía para el primer despliegue.
+3. En *Avanzado → GIT*:
+   - **Repositorio:** `https://github.com/hectortradeflex/navidad.git`. Si el repo se
+     vuelve privado, usa `git@github.com:hectortradeflex/navidad.git` y agrega la
+     clave SSH que muestra hPanel en GitHub, en *Settings → Deploy keys*.
+   - **Rama:** `main`.
+   - **Directorio:** vacío.
+   - Pulsa **Crear** y luego **Desplegar**.
+   - Para actualizar solo, activa *Implementación automática* y pega la URL del
+     webhook en GitHub, en *Settings → Webhooks*.
+4. Sigue desde el paso 4 de la opción A.
 
-### Opcional: fijar la contraseña o mover los datos
-En `config.php` puedes fijar la contraseña (`admin_password`) en lugar de crearla
-desde el panel. También puedes mover la base de datos fuera de `public_html`
-(`data_dir`), por ejemplo a `dirname(__DIR__) . '/intercambio-datos'`.
+### Opción C · Subir los archivos a mano
+
+En GitHub, pulsa *Code → Download ZIP*. En el *Administrador de archivos*, súbelo y
+extráelo de modo que `index.html`, `api.php` y `.htaccess` queden directamente en
+`public_html`. Sigue desde el paso 4 de la opción A.
+
+> **Respaldo:** descarga `intercambio-datos/intercambio.sqlite`, que está junto a
+> `public_html`. Si el hosting no deja escribir fuera del sitio, la base se guarda
+> dentro, en `data/`, protegida por `.htaccess`. En ese caso, **no la borres al
+> actualizar**. En `config.php` puedes fijar otra ruta (`data_dir`) o la contraseña
+> (`admin_password`).
 
 ## Probar en tu computadora
 

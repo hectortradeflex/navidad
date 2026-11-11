@@ -64,14 +64,32 @@ if (empty($_SESSION['csrf'])) {
 }
 
 // ------------------------------------------------------------------ base de datos
+/**
+ * Dónde vive la base de datos. Por defecto, FUERA de la carpeta del sitio: algunos
+ * despliegues (como el "estático" de Hostinger) reemplazan toda la carpeta del sitio y
+ * borrarían a los participantes y el sorteo.
+ */
+function data_dir(): string
+{
+    global $CONFIG;
+    $configured = trim((string) ($CONFIG['data_dir'] ?? ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+    $outside = dirname(__DIR__) . '/intercambio-datos';
+    if (is_dir($outside) ? is_writable($outside) : is_writable(dirname(__DIR__))) {
+        return $outside;
+    }
+    return __DIR__ . '/data';
+}
+
 function db(): PDO
 {
     static $pdo = null;
-    global $CONFIG;
     if ($pdo) {
         return $pdo;
     }
-    $dir = rtrim((string) $CONFIG['data_dir'], '/');
+    $dir = data_dir();
     if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
         throw new RuntimeException("No se pudo crear la carpeta de datos $dir");
     }

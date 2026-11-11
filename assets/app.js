@@ -26,7 +26,11 @@ async function init() {
     setMe(info.me);
     renderExchange();
   } catch (err) {
-    toast(err.message, "error");
+    if (err.code === "no_php") {
+      $("#main").prepend(el("div", { class: "notice error", role: "alert" }, el("span", { text: err.message })));
+    } else {
+      toast(err.message, "error");
+    }
   }
   route();
 }

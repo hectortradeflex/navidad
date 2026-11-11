@@ -22,9 +22,20 @@ async function request(action, body) {
   let data;
   try {
     res = await fetch(`api.php?action=${encodeURIComponent(action)}`, opts);
-    data = await res.json();
   } catch {
     throw new ApiError(0, null);
+  }
+  try {
+    data = await res.json();
+  } catch {
+    // Llegó algo que no es JSON: el servidor no está ejecutando api.php.
+    throw new ApiError(res.status, {
+      error: "no_php",
+      message:
+        res.status === 404
+          ? "No se encontró api.php en el servidor. Revisa que se hayan subido todos los archivos del sitio."
+          : "El servidor no está ejecutando PHP, y este sitio lo necesita (PHP 8 o superior). Publícalo como sitio web con PHP: ver README.",
+    });
   }
   if (data?.csrf) csrf = data.csrf;
   if (!res.ok || data?.ok === false) throw new ApiError(res.status, data);
